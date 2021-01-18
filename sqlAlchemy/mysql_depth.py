@@ -1,56 +1,59 @@
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
 from flask import Flask, request, flash, url_for, redirect, render_template
-from PIL import Image
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt 
 from matplotlib.image import imread, imsave
 from skimage.transform import resize
 
-depth_data = np.genfromtxt('./img.csv', delimiter=',', skip_header=1, skip_footer=1, usecols=range(1,201))
+host = '127.0.0.1'
+port = 3306
+db = 'depth'
+user = 'root'
+password = 'root'
+
+depth_data = np.genfromtxt('./img.csv', delimiter=',', skip_header = 1,  skip_footer=1, usecols=range(0,201))
 print(depth_data.shape)
-print(depth_data[0][0], depth_data[-1][0])
+print(depth_data[:, 1:])
+raw_data = depth_data[:, 1:]
+imsave('original_data.png', raw_data)
+plt.imshow(raw_data)
+
+resized_data = resize(raw_data, (raw_data.shape[0], 150))
+imsave('resized_data.png', resized_data)
+
+resized_data = resized_data.astype(int)
+out_data = np.concatenate((depth_data[:, 0:1], resized_data), axis=1)
+
+columns = ['depth']
+for i in range(150):
+    columns.append('col' + str(i))
+len(columns)
 
 
+depth_df = pd.DataFrame(out_data, columns=columns)
 
-# imsave('./original_depth.png', depth_data, cmap='gray')
-plt.imshow(depth_data)
-# resized_data = resize(depth_data, (150,  depth_data.shape[0]))
+engine = create_engine(str(r"mysql+mysqldb://%s:" + '%s' + "@%s/%s?charset=utf8") % (user, password, host, db))
 
-# fig, axes = plt.subplots(nrows=2, ncols=2)
+try:
+    depth_df.to_sql('layer',con=engine,if_exists='replace',index=False)
+except Exception as e:
+    print(e)
 
-# ax = axes.ravel()
+conn = engine.connect()
 
-# ax[0].imshow(resized_data, cmap='gray')
-# ax[0].set_title("Original image")
+depth_min = 9100
+depth_max = 9102
 
-# im = Image.open(r'./original_depth.png')
-# im.show()
-# width, height = im.size
-# print(width, height)
+select_sql =r'SELECT * FROM layer WHERE depth > %d AND depth < %d ' % (depth_min, depth_max)
+result = conn.execute(select_sql)
+res = []
+for row in result:
+    res.append(row)
+res_img = np.asarray(res)[:, 1:]
+print(res_img.shape)
 
-# im1 = im.resize((150, height), resample=2)
-# im1.save('./resized_depth.png')
-# im1.show()
-
-# im_df = pd.DataFrame(im1)
-# print(type(im_df))
-
-
-
-# host = '127.0.0.1'
-# port = 3306
-# db = 'depth'
-# user = 'root'
-# password = 'root'
-
-# app = Flask(__name__)
-# app.config['SQLAlchemy_DATABASE_URI'] = str(r"mysql+pymysql://%s:" + '%s' + "@%s/%s") % (user, password, host, db)
+plt.imshow(res_img, cmap='gray')
+imsave('r1.png', res_img, cmap='gray')
 
 
-# db = SQLAlchemy(app)
-
-# class Layer(db.Model):
-#   id = db.Column('id', db.Integer, primary_key = True)
-#   name = db.Column(db.String(100))
-#   age = db.Column(db.String(200))
