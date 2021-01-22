@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Home</title>
+  </head>
+
+  <body>
+    <h3>
+      <a href="{{ url_for('statelistresource') }}"
+        >States Total Net Generation 2016</a
+      >
+    </h3>
+
+    <hr />
+
+    {%- for message in get_flashed_messages()%}
+    {{ message }}
+    {%- endfor %}
+
+    <h3>States List</h3>
+    <table border="2" padding="5">
+      <thead>
+        <tr>
+          <!-- <th>State Name</th> -->
+          <th>State</th>
+          <th>Annual net generation (MWh)</th>
+          <!-- <th>Plant latitude</th> -->
+          <!-- <th>Plant longitude</th> -->
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for state in States %}
+        <tr>
+          <td>{{ state.PSTAT }}</td>
+          <td>{{ state.STNGENAN }}</td>
+          <!-- <td>{{ state.LAT }}</td>
+          <td>{{ state.LON }}</td> -->
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <br /><br />
+
+    <a href="{{ url_for('plantlistresource') }}"
+      >Plants Total Net Generation 2016</a
+    >
+  </body>
+</html>
