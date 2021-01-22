@@ -1,7 +1,8 @@
-from flask import Flask, request, flash, url_for, redirect, render_template,make_response
+from flask import Flask, flash, redirect, render_template,make_response
 from flask_sqlalchemy import SQLAlchemy
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, request, url_for, abort
 from flask_marshmallow import Marshmallow
+from marshmallow import Schema, fields
 import pandas as pd
 import numpy as np
 
@@ -20,10 +21,12 @@ db = SQLAlchemy(app)
 api = Api(app)
 ma = Marshmallow(app)
 
+class PlantQuerySchema(Schema):
+  top = fields.Int()
 
 class Plants(db.Model):
   id = db.Column('index', db.Integer, primary_key = True)
-  PSTAT = db.Column(db.String(10))
+  PSTAT = db.Column(db.String(10), db.ForeignKey('states.PSTAT'))
   PNAME = db.Column(db.String(200))
   PLNGENAN = db.Column(db.Float())
   CNTYNAME = db.Column(db.String(200))
@@ -31,10 +34,12 @@ class Plants(db.Model):
   LON = db.Column(db.Float())
   YEAR = db.Column(db.Integer())
 
+  state = db.relationship('States', backref="Plants")
+
 
 class PlantsSchema(ma.Schema):
   class Meta:
-    fields = ("PNAME", "PSTAT", "PLNGENAN", "LAT", "LON")
+    fields = ("PNAME", "PSTAT", "STNGENAN", "PLNGENAN", "LAT", "LON")
     model = Plants
 
 plant_schema = PlantsSchema()
@@ -60,7 +65,21 @@ states_schema = StatesSchema(many = True)
 # @api.representation('text/html')
 class PlantListResource(Resource):
     def get(self):
-      plants = Plants.query.order_by(Plants.PLNGENAN.desc()).limit(100).all()
+      args = request.args
+      errors = PlantQuerySchema().validate(args)
+      print(args, errors)
+      if errors:
+        abort(500)
+      plants = Plants.query.join(States, Plants.PSTAT==States.PSTAT).add_columns(
+        Plants.PNAME,
+        Plants.PSTAT,
+        Plants.PLNGENAN,
+        States.STNGENAN,
+        Plants.LAT,
+        Plants.LON
+      ).order_by(Plants.PLNGENAN.desc()).limit(10).all()
+      # .paginate(page, 1, False)
+      print(plants[0]._asdict())
       headers = {'Content-Type': 'text/html'}
       return make_response(render_template('list_plants.html', Plants = plants_schema.dump(plants)),200,headers)
 
@@ -69,7 +88,6 @@ class StateListResource(Resource):
       states = States.query.order_by(States.STNGENAN.desc()).limit(100).all()
       headers = {'Content-Type': 'text/html'}
       return make_response(render_template('list_states.html', States = states_schema.dump(states)),200,headers)
-
 
 
 api.add_resource(PlantListResource, '/plants')
