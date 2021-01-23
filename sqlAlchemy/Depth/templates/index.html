@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Query image frames from depth</title>
+  </head>
+  <body>
+    <h3>Set depth_min, depth_max, and cmp to fetch the target image frame</h3>
+
+    <form action="" method="post" id="query_img">
+      <label
+        >Depth_min:
+        <input type="text" name="depth_min" />
+      </label>
+      <label
+        >Depth_max:
+        <input type="text" name="depth_max" />
+      </label>
+
+      <label
+        >Choose colormap
+        <select name="cmp">
+          <option>gray</option>
+          {% for i in range(0, len) %}
+          <option value="{{ cmps[i] }}">{{ cmps[i] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="submit" value="Submit" />
+    </form>
+    <p id="result"></p>
+    <img src="" alt="" id="img" />
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+      $('#query_img').on('submit', function(e) {
+        e.preventDefault()
+        let formData = new FormData(e.currentTarget)
+        let depth_min = formData.get('depth_min')
+        let depth_max = formData.get('depth_max')
+        let cmp = formData.get('cmp')
+        if (depth_min > depth_max) {
+          alert('depth_max should greater than depth_min!')
+          return
+        }
+
+        if (
+          depth_min < 9000.1 ||
+          depth_min > 9546 ||
+          depth_max < 9000.1 ||
+          depth_max > 9546
+        ) {
+          alert('please enter range from 9000.1 to 9546 !')
+          return
+        }
+        $.ajax({
+          url: '/img_frame',
+          type: 'POST',
+          // contentType: 'application/json',
+          data: {
+            depth_min,
+            depth_max,
+            cmp
+          },
+          xhrFields: {
+            responseType: 'blob'
+          },
+          cache: false,
+          success: function(data) {
+            var img = document.getElementById('img')
+            var url = window.URL || window.webkitURL
+            img.src = url.createObjectURL(data)
+            console.log(url)
+            $('#result').text(
+              'depth_min: ' +
+                depth_min +
+                '  depth_max: ' +
+                depth_max +
+                '  colormap: ' +
+                cmp
+            )
+          }
+        })
+        console.log(depth_min, depth_max, cmp)
+      })
+    </script>
+  </body>
+</html>

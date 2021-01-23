@@ -10,7 +10,7 @@ host = '127.0.0.1'
 port = 3306
 db = 'depth'
 user = 'root'
-password = 'root'
+password = 'zsy007'
 
 img_path = './static/img/'
 cmps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
@@ -76,4 +76,4 @@ def queryImg():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=8888)

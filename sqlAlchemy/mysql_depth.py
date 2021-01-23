@@ -10,7 +10,7 @@ host = '127.0.0.1'
 port = 3306
 db = 'depth'
 user = 'root'
-password = 'root'
+password = 'zsy007'
 
 depth_data = np.genfromtxt('./img.csv', delimiter=',', skip_header = 1,  skip_footer=1, usecols=range(0,201))
 print(depth_data.shape)

@@ -19,6 +19,29 @@
     {{ message }}
     {%- endfor %}
 
+    <form action="" method="post" id="query_plants">
+      <label
+        >Top N:
+        <input type="number" name="top" placeholder="10" /></input>
+      </label>
+
+      <label
+        >Choose state
+        <select name="state">
+          <option>All</option>
+          {% for i in range(0, 51) %}
+          <option value="{{ States[i]['PSTAT'] }}">{{
+            States[i]['PSTAT']
+          }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="submit" value="Submit" />
+    </form>
+
+    <p id="result"></p>
+    <img src="" alt="" id="img" />
+
     <h3>Plants List</h3>
     <table border="2" padding="5">
       <thead>
@@ -50,5 +73,33 @@
     <a href="{{ url_for('statelistresource') }}"
       >States Total Net Generation 2016</a
     >
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+      $('#query_plants').on('submit', function(e) {
+        e.preventDefault()
+        let formData = new FormData(e.currentTarget)
+        let top = parseInt(formData.get('top'))
+        let state = formData.get('state')
+
+        if (top < 0 || top > 9668) {
+          alert('please enter range from 0 to 9668 !')
+          return
+        }
+        $.ajax({
+          url: '/plant_list',
+          type: 'GET',
+          // contentType: 'application/json',
+          data: {
+            top: top,
+            state: state
+          },
+          // cache: false,
+          success: function(data) {
+            // console.log(data)
+          }
+        })
+      })
+    </script>
   </body>
 </html>

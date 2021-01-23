@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Plant View</title>
+  </head>
+  <body>
+    <h3>
+      Plant Total Net Generation 2016
+    </h3>
+
+    <hr />
+
+    {%- for message in get_flashed_messages()%}
+    {{ message }}
+    {%- endfor %}
+
+    <form action="" method="post" id="query_plants">
+      <label
+        >Top N:
+        <input type="number" name="top" placeholder="0" /></input>
+      </label>
+
+      <label
+        >Choose state
+        <select name="state">
+          <option>All</option>
+          {% for i in range(0, 51) %}
+          <option value="{{ States[i]['PSTAT'] }}">{{
+            States[i]['PSTAT']
+          }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="submit" value="Submit" />
+    </form>
+
+    <div id="map" style="margin:10px;padding: 20px"></div>
+
+    <h3>Plants List</h3>
+    <table border="2" padding="5">
+      <thead>
+        <tr>
+          <th>Plant Name</th>
+          <th>State</th>
+          <th>Plant Annual net generation (MWh)</th>
+          <th>State Annual net generation (MWh)</th>
+          <th>Plant latitude</th>
+          <th>Plant longitude</th>
+        </tr>
+      </thead>
+
+      <tbody id = 'plant_list' >
+        
+      </tbody>
+    </table>
+    <br /><br />
+
+    <a href="{{ url_for('statelistresource') }}"
+      >States Total Net Generation 2016</a
+    >
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js" charset="utf-8"></script>
+
+    <script>
+      String.prototype.format = String.prototype.f = function () {
+          var s = this,
+            i = arguments.length;
+
+          while (i--) {
+            s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+          }
+          return s;
+        };
+    </script>
+    <script>
+      var accessToken = 'pk.eyJ1IjoienN5MDA3IiwiYSI6ImNrN3B4OHZrNjA4amkzaXFrMXJhM3U5dXAifQ.iyKLX5pO6WSWnZ3HbnPXYw';
+      var config = {
+          mapboxAccessToken: accessToken
+        };
+      var layout = {
+        mapbox: { style: "dark", zoom: 3, center: { lon: -95.7129, lat: 37.0902 } },
+        margin: { t: 0, b: 0 }
+      };
+      var data = [
+          { type: "scattermapbox", lon: [], lat: [] }
+        ];
+      
+      Plotly.newPlot('map', data, layout, config);
+      $('#query_plants').on('submit', function(e) {
+        e.preventDefault()
+        let formData = new FormData(e.currentTarget)
+        let top = parseInt(formData.get('top'))
+        let state = formData.get('state')
+
+        if (top < 0 || top > 9668) {
+          alert('please enter range from 0 to 9668 !')
+          return
+        }
+        $.ajax({
+          url: '/plant_list',
+          type: 'GET',
+          // contentType: 'application/json',
+          data: {
+            top: top,
+            state: state
+          },
+          // cache: false,
+          success: function(data) {
+            console.log('res: ', data)
+            $('#plant_list').html("")
+            var rowTemplate = "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>";
+            var lon = []
+            var lat = []
+            var text = []
+            var net = []
+            var net1 = []
+            var name = []
+            var percentage = []
+            var maxNet = 0
+            for(var i = 0; i < data.length; i++){
+              var plant = data[i]
+              lon.push(plant.LON)
+              lat.push(plant.LAT)
+              name.push(plant.PNAME)
+              if(plant.PLNGENAN > maxNet){
+                maxNet = plant.PLNGENAN
+              }
+              plant.PLNGENAN = Math.abs(plant.PLNGENAN)
+              net.push(plant.PLNGENAN)
+              var temp = plant.PLNGENAN / plant.STNGENAN
+              text.push(plant.STNGENAN)
+              percentage.push(temp.toFixed(2))
+              $('#plant_list').append(rowTemplate.format(plant.PNAME, plant.PSTAT, plant.PLNGENAN, plant.STNGENAN, plant.LAT, plant.LON))
+            }
+            for(var i = 0; i < net.length; i++){
+              net1[i] = net[i] / maxNet * 40
+            }
+            console.log(lon, lat, net, percentage)
+            
+            data = [
+              { type: "scattermapbox", 
+                lon: lon, 
+                lat: lat, 
+                marker: { 
+                  size: net1, 
+                  opacity: net,
+                  color: percentage,
+                  colorscale: 'YlOrRd' 
+                }, 
+                name: name,
+                text: text, 
+                customdata: name, 
+                hovertemplate:
+                 "<b>%{customdata}</b><br><br>" +
+                  "Plant annual net generation(absolute) (MWh): %{marker.opacity:,.0f}<br>" +
+                  "Plant'State annual net generation (MWh): %{text:,.0f}<br>" +
+                  "Percentage of the state: %{marker.color:.2%}" +
+                  "<extra></extra>"
+                , }
+            ];
+            // marker: { size: net }, text: text, name: name, hoverinfo: "name + text",
+            layout = {
+              title: 'Top ' + top + ' plants of ' + state,
+              mapbox: { style: "dark", zoom: 3, center: { lon: lon[parseInt(lon.length/2)], lat: lat[parseInt(lat.length / 2)] } },
+              margin: { t: 0, b: 0 }
+            };
+
+            Plotly.newPlot('map', data, layout, config);
+          }
+        })
+      })
+    </script>
+  </body>
+</html>
